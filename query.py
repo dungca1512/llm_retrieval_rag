@@ -14,6 +14,7 @@ model = SentenceTransformer('all-MiniLM-L6-v2')
 client = chromadb.PersistentClient(path="./chroma_db")
 collection = client.get_collection("paper_embeddings")
 
+
 def get_relevant_context(query, top_k=3):
     # Tạo embedding cho câu query
     query_embedding = model.encode(query).tolist()
@@ -28,15 +29,16 @@ def get_relevant_context(query, top_k=3):
     context = "\n\n".join(results['documents'][0])
     return context
 
+
 def answer_question(query):
     # Lấy context liên quan
     context = get_relevant_context(query)
 
     # Tạo prompt cho PaLM
-    prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, say "I don't have enough information to answer that question."
+    prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, 
+    say "I don't have enough information to answer that question."
 
-Context:
-{context}
+Context: {context}
 
 Question: {query}
 
@@ -60,6 +62,7 @@ Answer:"""
         return response_json['candidates'][0]['output']
     else:
         return "Sorry, I couldn't generate a response."
+
 
 # Sử dụng hệ thống
 while True:
