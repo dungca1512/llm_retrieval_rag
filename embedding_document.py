@@ -3,6 +3,7 @@ from sentence_transformers import SentenceTransformer
 import chromadb
 import uuid
 
+
 # Bước 1 & 2: Đọc file PDF và trích xuất văn bản
 def extract_text_from_pdf(pdf_path):
     with open(pdf_path, 'rb') as file:
@@ -12,12 +13,14 @@ def extract_text_from_pdf(pdf_path):
             text += page.extract_text()
     return text
 
+
 # Bước 3: Tạo embedding cho văn bản
 def create_embedding(text, model):
     # Chia văn bản thành các đoạn
     paragraphs = text.split('\n\n')
     embeddings = model.encode(paragraphs)
     return embeddings, paragraphs
+
 
 # Bước 4: Lưu vào Chroma database
 def save_to_chroma(pdf_name, embeddings, paragraphs):
@@ -37,8 +40,9 @@ def save_to_chroma(pdf_name, embeddings, paragraphs):
         ids=ids
     )
 
+
 # Sử dụng các hàm
-pdf_path = '2005.11401v4.pdf'
+pdf_path = './data/2005.11401v4.pdf'
 pdf_name = '2005.11401v4.pdf'
 
 # Tải mô hình Sentence Transformer
@@ -49,6 +53,7 @@ embeddings, paragraphs = create_embedding(text, model)
 save_to_chroma(pdf_name, embeddings, paragraphs)
 
 print("Embedding completed and saved to Chroma database.")
+
 
 # Hàm để tìm kiếm đoạn văn tương tự
 def search_similar_paragraphs(query, top_k=5):
@@ -66,14 +71,15 @@ def search_similar_paragraphs(query, top_k=5):
 
     return results
 
+
 # Ví dụ sử dụng hàm tìm kiếm
 query = "Your search query here"
 similar_paragraphs = search_similar_paragraphs(query)
 
-for i, (document, metadata, distance) in enumerate(zip(similar_paragraphs['documents'][0], 
+for i, (document, metadata, distance) in enumerate(zip(similar_paragraphs['documents'][0],
                                                        similar_paragraphs['metadatas'][0],
                                                        similar_paragraphs['distances'][0])):
-    print(f"Result {i+1}:")
+    print(f"Result {i + 1}:")
     print(f"Similarity: {1 - distance:.4f}")  # Chuyển đổi khoảng cách thành độ tương đồng
     print(f"PDF: {metadata['pdf_name']}")
     print(f"Paragraph: {document[:100]}...")  # In 100 ký tự đầu tiên
