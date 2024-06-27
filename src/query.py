@@ -19,11 +19,11 @@ client = chromadb.PersistentClient(path="./chroma_db")
 collection = client.get_collection("paper_embeddings")
 
 
-def get_relevant_context(query, top_k=3, max_length=500):
+def get_relevant_context(query, top_k=3, max_length=1000):
     # Create embedding for query
     query_embedding = model.encode(query).tolist()
 
-    # Search for similar passages
+    # Search for similar query
     results = collection.query(
         query_embeddings=[query_embedding],
         n_results=top_k
@@ -36,12 +36,12 @@ def get_relevant_context(query, top_k=3, max_length=500):
     if len(context) > max_length:
         context = context[:max_length] + "..."
 
-    return context
+    return context, results['metadatas'][0]
 
 
 def answer_question(query):
-    # Get context
-    context = get_relevant_context(query)
+    # Get context and metadata
+    context, metadatas = get_relevant_context(query)
 
     # Generate prompt for PaLM
     prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, 
@@ -68,17 +68,23 @@ def answer_question(query):
     response_json = response.json()
 
     if 'candidates' in response_json and len(response_json['candidates']) > 0:
-        return response_json['candidates'][0]['output']
+        return response_json['candidates'][0]['output'], context, metadatas
     else:
-        return "Sorry, I couldn't generate a response."
+        return "Sorry, I couldn't generate a response.", context, metadatas
+
 
 def main():
     while True:
         query = input("Enter your question (or 'quit' to exit): ")
         if query.lower() == 'quit':
             break
-        answer = answer_question(query)
+        answer, context, metadatas = answer_question(query)
         print(f"Answer: {answer}\n")
+        print(f"Context used:\n{context}\n")
+        print("Metadata of documents containing the context:")
+        for metadata in metadatas:
+            print(metadata)
+        print("\n")
 
 
 if __name__ == "__main__":
