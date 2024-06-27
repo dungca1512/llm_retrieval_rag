@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>AI Chatbot</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         body {
             font-family: 'Inter', sans-serif;
@@ -31,14 +32,12 @@
             padding: 20px;
         }
         .message {
+            display: flex;
+            align-items: flex-end;
             margin-bottom: 20px;
-            line-height: 1.5;
         }
-        .user-message {
-            text-align: right;
-        }
-        .bot-message {
-            text-align: left;
+        .message.user-message {
+            flex-direction: row-reverse;
         }
         .message-content {
             display: inline-block;
@@ -53,6 +52,16 @@
         .bot-message .message-content {
             background-color: #e9ecef;
             color: black;
+        }
+        .message-icon {
+            margin: 0 10px;
+            font-size: 24px;
+        }
+        .user-message .message-icon {
+            color: #007bff;
+        }
+        .bot-message .message-icon {
+            color: #6c757d;
         }
         .input-area {
             display: flex;
@@ -108,7 +117,6 @@
                 },
                 success: function(response) {
                     addMessage(response.answer, 'bot');
-                    // You can add handling for context and metadata here if needed
                 },
                 error: function() {
                     addMessage("Sorry, I couldn't process your request.", 'bot');
@@ -119,7 +127,9 @@
         }
 
         function addMessage(content, sender) {
+            var icon = sender === 'user' ? '<i class="fas fa-user message-icon"></i>' : '<i class="fas fa-robot message-icon"></i>';
             var messageHtml = '<div class="message ' + sender + '-message">' +
+                              icon +
                               '<div class="message-content">' + content + '</div>' +
                               '</div>';
             $('#chat-messages').append(messageHtml);
