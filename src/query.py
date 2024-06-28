@@ -1,5 +1,5 @@
 import chromadb
-from sentence_transformers import SentenceTransformer
+from langchain_huggingface import HuggingFaceEmbeddings
 import requests
 import json
 from dotenv import load_dotenv
@@ -9,24 +9,24 @@ import os
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 
-API_URL = f"https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generateText?key={API_KEY}"
+API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={API_KEY}"
 
-# Init Sentence Transformer model
-model = SentenceTransformer('all-MiniLM-L6-v2')
+# Init HuggingFaceEmbeddings model
+embeddings = HuggingFaceEmbeddings()
 
 # Connect to Chroma database
 client = chromadb.PersistentClient(path="./chroma_db")
-collection = client.get_collection("paper_embeddings")
+collection = client.get_collection("markdown_collection")  # Đảm bảo tên này khớp với tên collection khi bạn tạo embedding
 
-
-def get_relevant_context(query, top_k=3, max_length=1000):
+def get_relevant_context(query, top_k=1, max_length=1000):
     # Create embedding for query
-    query_embedding = model.encode(query).tolist()
+    query_embedding = embeddings.embed_query(query)
 
     # Search for similar query
     results = collection.query(
         query_embeddings=[query_embedding],
-        n_results=top_k
+        n_results=top_k,
+        include=["documents", "metadatas"]
     )
 
     # Combine similar paragraphs into one context
@@ -43,8 +43,8 @@ def answer_question(query):
     # Get context and metadata
     context, metadatas = get_relevant_context(query)
 
-    # Generate prompt for PaLM
-    prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, 
+    # Generate prompt for Gemini
+    prompt = f"""Based on the following context from markdown documents, please answer the question. If the answer is not in the context, 
     say "I don't have enough information to answer that question."
     
     Context: {context}
@@ -53,7 +53,7 @@ def answer_question(query):
 
     Answer:"""
 
-    # Call Google PaLM API
+    # Call Google Gemini API
     payload = json.dumps({
         "prompt": {
             "text": prompt
@@ -68,7 +68,7 @@ def answer_question(query):
     response_json = response.json()
 
     if 'candidates' in response_json and len(response_json['candidates']) > 0:
-        return response_json['candidates'][0]['output'], context, metadatas
+        return response_json['candidates'][0]['content']['parts'][0]['text'], context, metadatas
     else:
         return "Sorry, I couldn't generate a response.", context, metadatas
 
@@ -89,3 +89,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
