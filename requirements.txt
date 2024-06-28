@@ -9,3 +9,6 @@ django==4.2.13
 langchain
 langchain-huggingface
 huggingface-hub
+unstructured
+markdown
+psutil

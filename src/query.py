@@ -16,9 +16,9 @@ embeddings = HuggingFaceEmbeddings()
 
 # Connect to Chroma database
 client = chromadb.PersistentClient(path="./chroma_db")
-collection = client.get_collection("markdown_collection")  # Đảm bảo tên này khớp với tên collection khi bạn tạo embedding
+collection = client.get_collection("all_documents_collection")  
 
-def get_relevant_context(query, top_k=1, max_length=1000):
+def get_relevant_context(query, top_k=3, max_length=2000):
     # Create embedding for query
     query_embedding = embeddings.embed_query(query)
 
@@ -38,13 +38,12 @@ def get_relevant_context(query, top_k=1, max_length=1000):
 
     return context, results['metadatas'][0]
 
-
 def answer_question(query):
     # Get context and metadata
     context, metadatas = get_relevant_context(query)
 
     # Generate prompt for Gemini
-    prompt = f"""Based on the following context from markdown documents, please answer the question. If the answer is not in the context, 
+    prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, 
     say "I don't have enough information to answer that question."
     
     Context: {context}
@@ -55,11 +54,15 @@ def answer_question(query):
 
     # Call Google Gemini API
     payload = json.dumps({
-        "prompt": {
-            "text": prompt
-        },
-        "temperature": 0.7,
-        "candidate_count": 1
+        "contents": [{
+            "parts": [{"text": prompt}]
+        }],
+        "generationConfig": {
+            "temperature": 0.7,
+            "topK": 1,
+            "topP": 1,
+            "maxOutputTokens": 2048,
+        }
     })
     headers = {
         'Content-Type': 'application/json'
@@ -67,11 +70,13 @@ def answer_question(query):
     response = requests.post(API_URL, headers=headers, data=payload)
     response_json = response.json()
 
+    # print("API Response:", response_json)  # Debug: Print full API response
+
     if 'candidates' in response_json and len(response_json['candidates']) > 0:
         return response_json['candidates'][0]['content']['parts'][0]['text'], context, metadatas
     else:
-        return "Sorry, I couldn't generate a response.", context, metadatas
-
+        error_message = response_json.get('error', {}).get('message', "Unknown error occurred")
+        return f"Sorry, I couldn't generate a response. Error: {error_message}", context, metadatas
 
 def main():
     while True:
@@ -80,12 +85,11 @@ def main():
             break
         answer, context, metadatas = answer_question(query)
         print(f"Answer: {answer}\n")
-        print(f"Context used:\n{context}\n")
-        print("Metadata of documents containing the context:")
-        for metadata in metadatas:
-            print(metadata)
-        print("\n")
-
+        # print(f"Context used:\n{context}\n")
+        # print("Metadata of documents containing the context:")
+        # for metadata in metadatas:
+        #     print(metadata)
+        # print("\n")
 
 if __name__ == "__main__":
     main()
