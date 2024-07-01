@@ -12,3 +12,5 @@ huggingface-hub
 unstructured
 markdown
 psutil
+gradio
+accelerate
