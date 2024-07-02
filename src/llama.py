@@ -1,3 +1,6 @@
-import gradio as gr
+# Use a pipeline as a high-level helper
+from transformers import pipeline
 
-gr.load("models/meta-llama/Meta-Llama-3-8B").launch()
+pipe = pipeline("text-generation", model="meta-llama/Meta-Llama-3-8B")
+
+print(pipe("Write me a poem about Machine Learning.")['generated_text'])

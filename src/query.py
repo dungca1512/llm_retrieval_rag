@@ -50,7 +50,7 @@ def answer_question(query):
 
     Question: {query}
 
-    Answer:"""
+    Answer: """
 
     # Call Google Gemini API
     payload = json.dumps({

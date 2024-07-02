@@ -32,7 +32,4 @@ word_2 = "banana"
 embedding_1 = EmbeddedVector.get_word_embedding(word_1)
 embedding_2 = EmbeddedVector.get_word_embedding(word_2)
 
-# print(f"Embedding: {embedding}")
-# print(f"Embedding shape: {embedding.shape}")
-
 print(f"Cosine similarity between '{word_1}' and '{word_2}': {EmbeddedVector.cosine_similarity(embedding_1, embedding_2)}")
