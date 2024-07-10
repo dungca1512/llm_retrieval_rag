@@ -14,3 +14,4 @@ markdown==3.6
 psutil==6.0.0
 gradio==4.37.2
 accelerate==0.31.0
+pymongo==4.8.0

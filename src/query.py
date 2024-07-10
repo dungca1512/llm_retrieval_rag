@@ -1,9 +1,10 @@
-import chromadb
-from langchain_huggingface import HuggingFaceEmbeddings
+from pymongo import MongoClient
+from sentence_transformers import SentenceTransformer
 import requests
 import json
 from dotenv import load_dotenv
 import os
+import numpy as np
 
 # Load API key from file .env
 load_dotenv()
@@ -11,32 +12,47 @@ API_KEY = os.getenv("API_KEY")
 
 API_URL = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key={API_KEY}"
 
-# Init HuggingFaceEmbeddings model
-embeddings = HuggingFaceEmbeddings()
+# Init SentenceTransformer model
+model = SentenceTransformer('all-MiniLM-L6-v2')  # This model produces 384-dimensional embeddings
 
-# Connect to Chroma database
-client = chromadb.PersistentClient(path="./chroma_db")
-collection = client.get_collection("all_documents_collection")  
+# Connect to MongoDB
+client = MongoClient('mongodb://localhost:27017/')
+db = client['pdf_database']
+collection = db['pdf_embeddings']
+
+
+def cosine_similarity(a, b):
+    a = a.flatten()
+    b = b.flatten()
+    return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
+
 
 def get_relevant_context(query, top_k=3, max_length=2000):
     # Create embedding for query
-    query_embedding = embeddings.embed_query(query)
+    query_embedding = model.encode(query)
 
-    # Search for similar query
-    results = collection.query(
-        query_embeddings=[query_embedding],
-        n_results=top_k,
-        include=["documents", "metadatas"]
-    )
+    # Search for similar documents in MongoDB
+    all_docs = list(collection.find())
+    similarities = []
+    for doc in all_docs:
+        doc_embedding = np.array(doc['embedding'])
+        similarity = cosine_similarity(query_embedding, doc_embedding)
+        similarities.append((similarity, doc))
+
+    # Sort by similarity and get top_k results
+    similarities.sort(key=lambda x: x[0], reverse=True)
+    top_results = similarities[:top_k]
 
     # Combine similar paragraphs into one context
-    context = "\n\n".join(results['documents'][0])
+    context = "\n\n".join([doc['file_path'] for _, doc in top_results])
+    metadatas = [{"file_path": doc['file_path']} for _, doc in top_results]
 
     # If the context is too long, cut it shorter
     if len(context) > max_length:
         context = context[:max_length] + "..."
 
-    return context, results['metadatas'][0]
+    return context, metadatas
+
 
 def answer_question(query):
     # Get context and metadata
@@ -45,7 +61,7 @@ def answer_question(query):
     # Generate prompt for Gemini
     prompt = f"""Based on the following context, please answer the question. If the answer is not in the context, 
     say "I don't have enough information to answer that question."
-    
+
     Context: {context}
 
     Question: {query}
@@ -70,13 +86,12 @@ def answer_question(query):
     response = requests.post(API_URL, headers=headers, data=payload)
     response_json = response.json()
 
-    # print("API Response:", response_json)  # Debug: Print full API response
-
     if 'candidates' in response_json and len(response_json['candidates']) > 0:
         return response_json['candidates'][0]['content']['parts'][0]['text'], context, metadatas
     else:
         error_message = response_json.get('error', {}).get('message', "Unknown error occurred")
         return f"Sorry, I couldn't generate a response. Error: {error_message}", context, metadatas
+
 
 def main():
     while True:
@@ -85,12 +100,13 @@ def main():
             break
         answer, context, metadatas = answer_question(query)
         print(f"Answer: {answer}\n")
+        # Uncomment the following lines if you want to see context and metadata
         # print(f"Context used:\n{context}\n")
         # print("Metadata of documents containing the context:")
         # for metadata in metadatas:
         #     print(metadata)
         # print("\n")
 
+
 if __name__ == "__main__":
     main()
-    

@@ -8,6 +8,7 @@ from langchain.schema import Document
 # Đường dẫn đến thư mục chứa dữ liệu
 data_folder = "./data"
 
+
 def read_files(folder_path):
     documents = []
     for root, dirs, files in os.walk(folder_path):
@@ -24,6 +25,7 @@ def read_files(folder_path):
                 print(f"Error loading {file_path}: {e}")
     return documents
 
+
 # Đọc các file
 docs = read_files(data_folder)
 
@@ -35,7 +37,8 @@ texts = text_splitter.split_documents(docs)
 embeddings = HuggingFaceEmbeddings()
 
 # Tạo và lưu trữ vector embeddings trong Chroma với tên collection cụ thể
-db = Chroma.from_documents(texts, embeddings, persist_directory="./chroma_db", collection_name="all_documents_collection")
+db = Chroma.from_documents(texts, embeddings, persist_directory="./chroma_db",
+                           collection_name="all_documents_collection")
 
 # Lưu cơ sở dữ liệu
 db.persist()

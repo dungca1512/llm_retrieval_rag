@@ -2,6 +2,7 @@ from django.shortcuts import render
 from django.http import JsonResponse
 from src.query import answer_question
 
+
 def chat_view(request):
     if request.method == 'POST':
         query = request.POST.get('query')
