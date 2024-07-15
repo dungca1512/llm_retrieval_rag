@@ -1,26 +1,24 @@
 import requests
 import json
-from dotenv import load_dotenv
 import numpy as np
 
 
 class RAG:
-    
+
     def __init__(self, url, model, client, db, collection) -> None:
         self.url = url
         self.model = model
         self.client = client
         self.db = db
         self.collection = collection
-    
+
     @staticmethod
     def cosine_similarity(a, b):
         a = a.flatten()
         b = b.flatten()
         return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-
-    def get_relevant_context(self, query, top_k=3, max_length=2000):
+    def get_relevant_context(self, query, top_k=5, max_length=2000):
         query_embedding = self.model.encode(query)
 
         all_docs = list(self.collection.find())
@@ -34,13 +32,19 @@ class RAG:
         top_results = similarities[:top_k]
 
         context = "\n\n".join([doc['content'] for _, doc in top_results])
-        metadatas = [{"url": doc['url']} for _, doc in top_results]
+        metadatas = [
+            {
+                "section": doc['section'],
+                "similarity": float(similarity)  # Convert to float for JSON serialization
+            }
+            for similarity, doc in top_results
+        ]
 
         if len(context) > max_length:
             context = context[:max_length] + "..."
 
         return context, metadatas
-    
+
     def answer_question(self, query):
         context, metadatas = self.get_relevant_context(query)
 
@@ -74,4 +78,4 @@ class RAG:
             return response_json['candidates'][0]['content']['parts'][0]['text'], context, metadatas
         else:
             error_message = response_json.get('error', {}).get('message', "Unknown error occurred")
-            return f"Sorry, I couldn't generate a response. Error: {error_message}", context, metadatas
+            return f"Sorry, I couldn't generate a response. Error: {error_message}"
