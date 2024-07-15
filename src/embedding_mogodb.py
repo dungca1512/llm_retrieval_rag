@@ -11,13 +11,15 @@ collection = db.data
 # Load mô hình SentenceTransformer
 model = SentenceTransformer('all-MiniLM-L6-v2')
 
+
 # Hàm tạo embedding cho văn bản
 def embed_text(text):
     return model.encode(text)
 
+
 # Tạo embedding cho các document và lưu vào MongoDB
 for doc in collection.find():
-    content = doc.get('content', '') 
+    content = doc.get('content', '')
     if content:
         embedding = embed_text(content)
         collection.update_one({'_id': doc['_id']}, {'$set': {'embedding': embedding.tolist()}})
@@ -40,4 +42,3 @@ index.add(embeddings)
 faiss.write_index(index, 'faiss_index.index')
 
 print("Indexing completed!")
-

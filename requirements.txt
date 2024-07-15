@@ -16,3 +16,4 @@ gradio==4.37.2
 accelerate==0.31.0
 pymongo==4.8.0
 faiss-cpu
+numpy~=1.26.4

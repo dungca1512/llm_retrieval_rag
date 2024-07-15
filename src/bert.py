@@ -3,11 +3,13 @@ from transformers import BertTokenizer, BertModel
 tokenizer = BertTokenizer.from_pretrained('bert-base-uncased')
 model = BertModel.from_pretrained('bert-base-uncased')
 
+
 def encode_text(text):
-  """Mã hóa văn bản thành embedding BERT."""
-  encoded_input = tokenizer(text, return_tensors='pt')
-  output = model(**encoded_input)
-  return output.last_hidden_state
+    """Mã hóa văn bản thành embedding BERT."""
+    encoded_input = tokenizer(text, return_tensors='pt')
+    output = model(**encoded_input)
+    return output.last_hidden_state
+
 
 text = """
 Samsung A12 là một chiếc smartphone giá rẻ 
