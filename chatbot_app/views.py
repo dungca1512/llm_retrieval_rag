@@ -1,6 +1,7 @@
 from django.shortcuts import render
 from django.http import JsonResponse
 from src.query import answer_question
+from src.config import Config
 
 
 def chat_view(request):

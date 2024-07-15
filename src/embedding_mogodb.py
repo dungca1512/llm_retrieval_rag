@@ -39,3 +39,5 @@ index.add(embeddings)
 # Lưu FAISS index vào file (tùy chọn)
 faiss.write_index(index, 'faiss_index.index')
 
+print("Indexing completed!")
+

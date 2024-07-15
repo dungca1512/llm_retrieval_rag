@@ -21,3 +21,4 @@ encoded_text = encode_text(text)
 
 # In embedding
 print(encoded_text)
+print(encoded_text.shape)
