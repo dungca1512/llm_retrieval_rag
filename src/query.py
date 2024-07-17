@@ -25,6 +25,7 @@ def main():
             break
         answer, context, metadatas = rag.answer_question(query)
         print(f"Answer: {answer}\n")
+        print(f"Context: {context}\n")
         print(f"Metadata: {metadatas}\n")
 
 

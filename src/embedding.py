@@ -1,14 +1,17 @@
 from sentence_transformers import SentenceTransformer
 from chunking import process_pdfs_in_directory
+from config import Config
+
+config = Config()
 
 
-def generate_embeddings(sections_list, model_name='all-MiniLM-L6-v2'):
+def generate_embeddings(sections_list, model_name=config.get_embedding_model()):
     model = SentenceTransformer(model_name)
     embeddings_with_content = []
 
     for sections in sections_list:
         for section, content in sections.items():
-            embedding = model.encode(content).tolist()  # Chuyển đổi embedding thành danh sách để lưu vào MongoDB
+            embedding = model.encode(content).tolist()  # Convert embedding to list and save to MongoDB
             embeddings_with_content.append({
                 'section': section,
                 'content': content,
