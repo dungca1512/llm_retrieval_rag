@@ -1,68 +1,60 @@
-import PyPDF2
-import re
-import os
+from pymongo import MongoClient
+from sentence_transformers import SentenceTransformer
+import numpy as np
+import faiss
 
+# Kết nối tới MongoDB
+client = MongoClient('mongodb://localhost:27017/')
+db = client.pdf_database
+collection = db.pdf_embeddings
 
-def extract_sections_from_pdf(pdf_file_path):
-    content_by_section = {}
-    current_section = None
-    current_text = []
+# Load mô hình SentenceTransformer
+model = SentenceTransformer('all-MiniLM-L6-v2')
 
-    def save_current_section():
-        nonlocal current_section, current_text
-        if current_section:
-            content_by_section[current_section] = "\n".join(current_text).strip()
-            current_text = []
+# Hàm tạo embedding cho văn bản
+def embed_text(text):
+    return model.encode(text)
 
-    with open(pdf_file_path, 'rb') as pdf_file:
-        reader = PyPDF2.PdfReader(pdf_file)
+# Tạo embedding cho các document và lưu vào MongoDB
+for doc in collection.find():
+    content = doc.get('content', '') 
+    if content:
+        embedding = embed_text(content)
+        collection.update_one({'_id': doc['_id']}, {'$set': {'embedding': embedding.tolist()}})
 
-        for page in reader.pages:
-            text = page.extract_text()
+# Tạo danh sách embedding và doc_ids
+embeddings = []
+doc_ids = []
 
-            matches = re.findall(r'(\d+\.?\d*\s+[A-Z][^\n]*)\n', text, flags=re.MULTILINE)
+for doc in collection.find({'embedding': {'$exists': True}}):
+    embeddings.append(doc['embedding'])
+    doc_ids.append(doc['_id'])
 
-            if matches:
-                start = 0
-                for match in matches:
-                    segment_text = match.strip()
-                    start_pos = text.find(match, start)
+embeddings = np.array(embeddings).astype('float32')
 
-                    if current_section:
-                        content_by_section[current_section] += "\n" + text[start:start_pos].strip()
-                    current_section = segment_text
-                    if current_section not in content_by_section:
-                        content_by_section[current_section] = current_section  # Add section title
-                    start = start_pos + len(match)
-                if current_section:
-                    content_by_section[current_section] += "\n" + text[start:].strip()
-            else:
-                if current_section:
-                    content_by_section[current_section] += "\n" + text.strip()
+# Tạo FAISS index
+index = faiss.IndexFlatL2(embeddings.shape[1])
+index.add(embeddings)
 
-        save_current_section()
+# Lưu FAISS index vào file (tùy chọn)
+faiss.write_index(index, 'faiss_index.index')
 
-    return content_by_section
+# Hàm truy vấn với embedding
+def search(query, top_k=5):
+    query_embedding = embed_text(query).astype('float32').reshape(1, -1)
+    distances, indices = index.search(query_embedding, top_k)
+    
+    results = []
+    for i in range(top_k):
+        doc_id = doc_ids[indices[0][i]]
+        doc = collection.find_one({'_id': doc_id})
+        results.append(doc)
+    
+    return results
 
+# Ví dụ truy vấn
+query = "What is Retrieval-Augmented Generation (RAG)?"
+results = search(query)
 
-def process_pdfs_in_directory(directory_path):
-    all_sections = []
-
-    for filename in os.listdir(directory_path):
-        if filename.endswith('.pdf'):
-            pdf_path = os.path.join(directory_path, filename)
-            sections = extract_sections_from_pdf(pdf_path)
-            all_sections.append(sections)
-    return all_sections
-
-
-# Thay đổi đường dẫn tới thư mục chứa các file PDF của bạn
-directory_path = '/home/dungca/Desktop/llm_retrieval_rag/data/papers'
-all_sections = process_pdfs_in_directory(directory_path)
-
-# In ra nội dung của từng phần từ tất cả các file PDF
-for file_sections in all_sections:
-    for section, content in file_sections.items():
-        print(f"Section: {section}")
-        print(content)
-        print("\n---\n")
+for result in results:
+    print(result)
