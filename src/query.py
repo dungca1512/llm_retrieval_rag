@@ -22,6 +22,7 @@ def main():
     while True:
         query = input("Enter your question (or 'quit' to exit): ")
         if query.lower() == 'quit':
+            print("Quit!")
             break
         answer, context, metadatas = rag.answer_question(query)
         print(f"Answer: {answer}\n")
