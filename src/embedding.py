@@ -21,12 +21,10 @@ def generate_embeddings(sections_list, model_name=config.get_embedding_model()):
 
 
 if __name__ == "__main__":
-    # Thay đổi đường dẫn tới thư mục chứa các file PDF của bạn
+    # Change path to data folder 
     directory_path = '../data/papers'
     all_sections = process_pdfs_in_directory(directory_path)
 
-    # Tạo embedding cho từng phần tử trong danh sách
+    # Embedding for each element in the list
     embeddings = generate_embeddings(all_sections)
-
-    # In ra embedding của từng phần tử
     print(embeddings)
